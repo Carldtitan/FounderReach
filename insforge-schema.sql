@@ -1,5 +1,6 @@
 create table if not exists founders (
   id text primary key,
+  "ownerId" text,
   startup text not null,
   description text not null default '',
   stage text not null,
@@ -39,6 +40,7 @@ create table if not exists targets (
   "sourceDomain" text not null,
   score text not null,
   rationale text not null,
+  contact jsonb not null default '{}'::jsonb,
   evidence jsonb not null default '[]'::jsonb,
   "createdAt" timestamptz not null
 );
