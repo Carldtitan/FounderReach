@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireMissionOwner } from "@/lib/authorization";
 import { addEvent, getMissionBundle, replaceMissionResults, updateMission } from "@/lib/store";
 import { runNimbleResearch, type NimbleResearchProgress } from "@/lib/nimble";
+import { runNimbleAccountDiscovery } from "@/lib/nimble-accounts";
 import { generateTargetsAndDrafts } from "@/lib/nebius";
 import {
   addBandScouts,
@@ -42,9 +43,22 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       tool: "BAND"
     });
 
-    const research = await runNimbleResearch(initial.founder, (progress) =>
-      reportNimbleProgress(params.id, roomId, board, progress)
-    );
+    const useAccountDiscovery = initial.founder.goal === "Customers" || initial.founder.stage === "First customers";
+    const accountDiscovery = useAccountDiscovery
+      ? await runNimbleAccountDiscovery(initial.founder, (progress) => reportNimbleProgress(params.id, roomId, board, progress))
+      : null;
+    const research = accountDiscovery
+      ? { sources: accountDiscovery.sources }
+      : await runNimbleResearch(initial.founder, (progress) => reportNimbleProgress(params.id, roomId, board, progress));
+
+    if (accountDiscovery) {
+      await recordCampaignEvent(params.id, roomId, {
+        agent: "Campaign coordinator",
+        eventType: "tool_result",
+        message: `Nimble account discovery retained ${accountDiscovery.prospects.length} businesses, enriched ${accountDiscovery.stats.enriched} public contact paths, and found ${accountDiscovery.stats.publicEmails} public emails`,
+        tool: "Nimble Maps + Map + Extract"
+      });
+    }
 
     const scouts = await getBandScouts();
     const scoutJoin = await addBandScouts(roomId, scouts);
@@ -98,7 +112,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     await updateMission(params.id, { currentStep: "Draft" });
     await startBandTask(roomId, board.tasks["Outreach drafts"], "Writing concise, evidence-based outreach");
-    const generated = await generateTargetsAndDrafts(initial.founder, initial.mission, research.sources, scoutBriefs);
+    const generated = await generateTargetsAndDrafts(
+      initial.founder,
+      initial.mission,
+      research.sources,
+      scoutBriefs,
+      accountDiscovery?.prospects || []
+    );
     await replaceMissionResults(params.id, generated.targets, generated.drafts);
     await completeBandTask(roomId, board.tasks["Outreach drafts"], `Completed ${generated.drafts.length} sourced drafts.`);
     await recordCampaignEvent(params.id, roomId, {
