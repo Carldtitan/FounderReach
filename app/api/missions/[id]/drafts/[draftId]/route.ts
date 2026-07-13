@@ -1,10 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireMissionOwner } from "@/lib/authorization";
 import { addEvent, getMissionBundle, updateDraftContent } from "@/lib/store";
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string; draftId: string } }
 ) {
+  const access = await requireMissionOwner(request, params.id).catch((error) => error);
+  if (access instanceof Error) {
+    const status = access.message === "AUTH_REQUIRED" ? 401 : access.message === "AUTH_FORBIDDEN" ? 403 : 404;
+    return NextResponse.json({ error: access.message }, { status });
+  }
   try {
     const body = await request.json();
     const subject = String(body.subject || "").trim().slice(0, 70);
