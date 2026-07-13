@@ -88,14 +88,16 @@ export function now() {
 }
 
 export async function createFounderMission(
-  founderInput: Omit<FounderProfile, "id" | "createdAt">,
-  missionInput: Pick<Mission, "goal" | "stage" | "playbook">
+  founderInput: Omit<FounderProfile, "id" | "ownerId" | "createdAt">,
+  missionInput: Pick<Mission, "goal" | "stage" | "playbook">,
+  ownerId: string
 ) {
   const data = await readData();
   const createdAt = now();
   const founder: FounderProfile = {
     ...founderInput,
     id: newId("founder"),
+    ownerId,
     createdAt
   };
   const mission: Mission = {
