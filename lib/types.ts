@@ -11,6 +11,7 @@ export type ResearchLane = "Pain signals" | "Buyer signals" | "Channel targets";
 
 export interface FounderProfile {
   id: string;
+  ownerId: string;
   startup: string;
   description: string;
   stage: Stage;
@@ -58,15 +59,25 @@ export interface Target {
   sourceDomain: string;
   score: Score;
   rationale: string;
+  contact?: ContactRoute;
   evidence: SourceEvidence[];
   createdAt: string;
+}
+
+export interface ContactRoute {
+  phone?: string;
+  email?: string;
+  website?: string;
+  contactUrl?: string;
+  address?: string;
+  source: "Nimble Google Maps" | "Nimble Extract" | "Public website";
 }
 
 export interface Draft {
   id: string;
   missionId: string;
   targetId: string;
-  channel: "Email" | "DM";
+  channel: "Email" | "DM" | "Call";
   subject: string;
   body: string;
   status: DraftStatus;
