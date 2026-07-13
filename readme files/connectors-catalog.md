@@ -1,0 +1,521 @@
+﻿# Available Connectors
+
+Connectors are grouped by category and sorted alphabetically. Gmail is currently the only one connected. Name any one and I'll set it up.
+
+### Email & Calendar
+
+- Benchmark Email
+- Bigmailer
+- Cal.com
+- CalendarHero
+- Calendly
+- Campaign Cleaner
+- Campayn
+- Deadline Funnel
+- Doppler Marketing Automation
+- Dripcel
+- EmailOctopus
+- Emailable
+- Emaillistverify
+- Enginemailer
+- Esputnik
+- Gmail (connected)
+- Google Calendar
+- Google Tasks
+- Iterable
+- Laposta
+- Loops.so
+- Mailbluster
+- Mailcheck
+- Mailcoach
+- Mailercloud
+- MailerLite
+- MailerSend
+- Mailboxlayer
+- Mailchimp
+- Mails.so
+- Mailsoftly
+- Mailtrap
+- Missive
+- Mixmax
+- Moosend
+- Motion
+- MXToolbox
+- NeverBounce
+- Niftyimages
+- Omnisend
+- Outlook
+- Persistiq
+- Postmark
+- Proxiedmail
+- Re:amaze
+- Remarkety
+- Reply
+- Resend
+- Sendfox
+- SendGrid
+- Sendlane
+- Sender
+- Sendspark
+- Simplero
+- SMS Alert
+- Smtp2go
+- Spondyr
+- Supportbee
+- Unione
+- Unisender
+- Userlist
+- Verifiedemail
+- Woodpecker Co
+- Yandex
+- Zerobounce
+- Zoho Mail
+
+### Cloud Storage & Docs
+
+- Algodocs
+- Box
+- Carbone
+- Cloudpress
+- Conversion Tools
+- Convertapi
+- Craftmypdf
+- Docmosis
+- Docsautomator
+- Docugenerate
+- Documint
+- Docsumo
+- Dromo
+- Echtpost
+- Encodian
+- Excel
+- Google Docs
+- Google Drive
+- Google Photos
+- Google Sheets
+- Google Slides
+- Google Super
+- Gigasheet
+- Nanonets
+- OneDrive
+- Parseur
+- Parsio.io
+- PDFless
+- PDFMonkey
+- SharePoint
+- Uploadcare
+
+### Dev & Project Management
+
+- Asana
+- Atlassian
+- Better Stack
+- Bitbucket
+- Breeze
+- Bugherd
+- ClickUp
+- Coda
+- Confluence
+- Dailybot
+- Devin MCP
+- Fibery
+- Gist
+- GitHub
+- GitLab
+- Grist
+- Hub Planner
+- Jira
+- Linear
+- monday.com
+- Notion
+- Nozbe Teams
+- Productlane
+- Shortcut
+- Streamtime
+- Teamcamp
+- TickTick
+- TimeCamp
+- Timely
+- Timelink
+- Trello
+- V0
+- Worksnaps
+
+### Messaging & Support
+
+- 2chat
+- Ably
+- Botbaba
+- Botstar
+- Botsonic
+- Canny
+- Chatbotkit
+- Chatfai
+- Chatwork
+- ClickMeeting
+- ClickSend
+- Connecteam
+- Discord
+- Discord Bot
+- Dovetail
+- Engage
+- Google Meet
+- Heyy
+- Intercom
+- Microsoft Teams
+- Mocean
+- Msg91
+- OneSignal REST API
+- OneSignal User Auth
+- Recall.ai
+- Slack
+- Slackbot
+- SMS Alert
+- Spoki
+- Superchat
+- Telegram
+- Telnyx
+- Teltel
+- TimelinesAI
+- Vestaboard
+- Waboxapp
+- Wati
+- Webex
+- Whautomate
+- WhatsApp
+- Zendesk
+- Zixflow
+- Zulip
+
+### CRM
+
+- ActiveCampaign
+- Affinity
+- Agiled
+- Apollo
+- Callingly
+- Capsule CRM
+- CentralStationCRM
+- Close
+- Customer.io
+- Dynamics 365
+- EspoCRM
+- Findymail
+- Fireberry
+- Folk
+- Forcemanager
+- GoDial
+- HubSpot
+- JobNimbus
+- Nango
+- NetHunt CRM
+- NoCRM.io
+- Nutshell
+- Odoo
+- Pipeline CRM
+- Postalytics
+- Salesflare
+- Salesforce
+- Salesmate
+- Simla.com
+- Suitedash
+- Zoho
+- Zoho Bigin
+- Zoho Desk
+
+### Marketing & Email Sending
+
+- ActiveTrail
+- Adrapid
+- Amcards
+- Ayrshare
+- Bannerbear
+- Beaconstac
+- Canva
+- Dotsimple
+- HypeAuditor
+- Planly
+- ReferralRock
+- Sidetracker
+- TinyURL
+- ToneDen
+
+### Social Media
+
+- Facebook
+- Instagram
+- LinkedIn
+- Reddit
+- Reddit Ads
+- Supadata
+- TikTok
+- TikTok Shop US Analyze
+- X (Twitter)
+- YouTube
+
+### Payments & Commerce
+
+- Altoviz
+- Apaleo
+- Appointo
+- ASIN Data API
+- Brex
+- BTCPay Server
+- Chaser
+- Clientary
+- Countdown API
+- Elorus
+- Finmei
+- Flutterwave
+- Harvest
+- Hostinger
+- Jungle Scout
+- Lemon Squeezy
+- Lexoffice
+- Maxio
+- Memberstack
+- Modelry
+- Moonclerk
+- Payhere
+- Plisio
+- Poof
+- QuickBooks
+- Retailed
+- Sevdesk
+- Square
+- Storeganise
+- Storerocket
+- Stripe
+- Xero
+- Zoho Books
+- Zoho Inventory
+- Zoho Invoice
+
+### Data & Databases
+
+- Airtable
+- Amplitude
+- BigDataCloud
+- Databox
+- Dataforseo
+- Datagma
+- DataRobot
+- Datascope
+- DaData.ru
+- Elasticsearch
+- Enigma
+- EODHD APIs
+- Finage
+- Fixer.io
+- Foursquare
+- Geocodio
+- Gigasheet
+- Google Address Validation
+- Google Admin
+- Google Ads
+- Google Analytics
+- Google BigQuery
+- Google Classroom
+- Google Cloud Vision
+- Google Maps
+- Google Search Console
+- Grafbase
+- Grist
+- Hex
+- InfluxDB Cloud
+- Polygon.io
+- Prisma
+- Rosette Text Analytics
+- RudderStack Transformation
+- Supabase
+
+### AI & ML
+
+- AI/ML API
+- Aivoov
+- All Images AI
+- AltText.ai
+- Anthropic Administrator
+- APIpie AI
+- Aryn
+- Astica AI
+- BigML
+- Bolna
+- Bonsai
+- Chatbotkit
+- Chatfai
+- Claid.ai
+- Cody
+- Convolo AI
+- CustomGPT
+- Diffbot
+- DocsBot AI
+- Docsumo
+- Extracta.ai
+- Fal.ai
+- Firecrawl
+- Flowiseai
+- Gan.AI
+- Griptape
+- HeyGen
+- Honeyhive
+- Mistral AI
+- OpenAI
+- Openrouter
+- Perplexity AI
+- Promptmate.io
+- Replicate
+- Roboflow
+- Scale AI
+- Shotstack
+- Studio By AI21 Labs
+- Tavily
+- Textcortex
+- Tisane
+
+### Design & CMS
+
+- Adrapid
+- Agility CMS
+- AltText.ai
+- Bannerbear
+- Canva
+- Cloudpress
+- Contentful
+- Contentful GraphQL
+- Figma
+- Hashnode
+- Imgix
+- Prismic
+- Sanity
+- Templated
+- V0
+- Wisepops
+- Zeplin
+
+### Research & Enrichment
+
+- Abstract
+- Aeroleads
+- Affinda
+- Agentql
+- Agenty
+- Ahrefs
+- Anchor Browser
+- Apify
+- Apify MCP
+- Bettercontact
+- BigPicture.io
+- Bright Data
+- Browseai
+- Census Bureau
+- Cloudflare Browser Rendering
+- Companyenrich
+- Crustdata
+- Dropcontact
+- Emelia
+- Exa
+- Findymail
+- Firmao
+- Fullenrich
+- Geoapify
+- GTmetrix
+- Hunter
+- Icypeas
+- Interzoid
+- Jungle Scout
+- Logo.dev
+- Lusha
+- Moz
+- Parallel
+- Parsehub
+- Parsera
+- People Data Labs
+- PhantomBuster
+- Piloterr
+- Scrape Do
+- Scrapegraph AI
+- Scrapfly
+- Scrapingant
+- Scrapingbee
+- Semantic Scholar
+- Semrush
+- SerpApi
+- Serpdog
+- Serply
+- Smartproxy
+- Supadata
+- Tavily
+- Tomba
+- WebScraper.io
+- WebScraping.AI
+- Wiza
+- ZenRows
+- Zyte API
+
+### Forms & E-Signature
+
+- Basin
+- Boloforms
+- Boldsign
+- Byteforms
+- Cabinpanda
+- Codereadr
+- CommCare
+- Docnify
+- Documenso
+- Eversign
+- Faceup
+- Feathery
+- Fillout Forms
+- Flexisign
+- Formcarry
+- Formdesk
+- Formsite
+- Getform
+- Nanonets
+- OkSign
+- PandaDoc
+- Signaturely
+- Typeform
+- Typless
+
+### Other
+
+- Accredible Certificates
+- Addressfinder
+- Alchemy
+- Ambee
+- Apilio
+- Better Proposals
+- Bitquery
+- Blackbaud
+- Blocknative
+- Bouncer
+- Boxhero
+- Brandfetch
+- Breathe HR
+- Cardly
+- Chmeetings
+- Coassemble
+- CoinMarketCal
+- CoinMarketCap
+- Coinranking
+- Context7
+- Conveyor
+- Cults
+- Dock Certs
+- Expofp
+- Fingertip
+- Fluxguard
+- Headout
+- Humanitix
+- LeadBoxer
+- Maintainx
+- Mapbox
+- Mopinion
+- Placekey
+- RAWG Video Games Database
+- RedCircle API
+- Strava
+- Talenthr
