@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireMissionOwner } from "@/lib/authorization";
 import { addEvent, getMissionBundle, replaceMissionResults, updateMission } from "@/lib/store";
 import { runNimbleResearch, type NimbleResearchProgress } from "@/lib/nimble";
 import { generateTargetsAndDrafts } from "@/lib/nebius";
@@ -17,10 +18,16 @@ import {
 } from "@/lib/band";
 import type { AgentEvent } from "@/lib/types";
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+  const access = await requireMissionOwner(request, params.id).catch((error) => error);
+  if (access instanceof Error) {
+    const status = access.message === "AUTH_REQUIRED" ? 401 : access.message === "AUTH_FORBIDDEN" ? 403 : 404;
+    return NextResponse.json({ error: access.message }, { status });
+  }
+
   try {
+    const initial = access.bundle;
     await updateMission(params.id, { status: "running", currentStep: "Research" });
-    const initial = await getMissionBundle(params.id);
     const room = await ensureBandRoom(initial.mission, initial.founder);
     const roomId = room.roomId || initial.mission.bandChatId;
     if (room.roomId && room.roomId !== initial.mission.bandChatId) {
