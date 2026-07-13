@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { Draft, FounderProfile, Mission, SourceEvidence, Target } from "./types";
 import type { BandScoutBrief } from "./band";
+import type { AccountProspect } from "./nimble-accounts";
 import { newId, now } from "./store";
 import { playbooks } from "./playbooks";
 
@@ -30,9 +31,11 @@ export async function generateTargetsAndDrafts(
   founder: FounderProfile,
   mission: Mission,
   sources: SourceEvidence[],
-  scoutBriefs: BandScoutBrief[] = []
+  scoutBriefs: BandScoutBrief[] = [],
+  accounts: AccountProspect[] = []
 ): Promise<{ targets: Target[]; drafts: Draft[] }> {
-  const generated = await callNebius(founder, sources, scoutBriefs).catch(() => fallbackGeneration(founder, sources));
+  const generated = await callNebius(founder, sources, scoutBriefs, accounts).catch(() => fallbackGeneration(founder, sources));
+  if (accounts.length) return materializeAccountTargets(founder, mission, accounts, generated.targets);
   const limited = generated.targets.slice(0, 10);
 
   const targets: Target[] = limited.map((item, index) => {
@@ -73,10 +76,55 @@ export async function generateTargetsAndDrafts(
   return { targets, drafts };
 }
 
+function materializeAccountTargets(
+  founder: FounderProfile,
+  mission: Mission,
+  accounts: AccountProspect[],
+  generated: GeneratedTarget[]
+): { targets: Target[]; drafts: Draft[] } {
+  const targets = accounts.slice(0, 30).map((account) => {
+    const generatedMatch = generated.find((item) => item.company.toLowerCase() === account.company.toLowerCase());
+    const source = account.evidence[0];
+    return {
+      id: newId("target"),
+      missionId: mission.id,
+      type: playbooks[founder.stage].targetType,
+      name: account.company,
+      company: account.company,
+      role: account.role,
+      url: source.url,
+      sourceDomain: source.domain,
+      score: account.score,
+      rationale: trimLine(generatedMatch?.rationale || account.rationale),
+      contact: account.contact,
+      evidence: account.evidence,
+      createdAt: now()
+    } satisfies Target;
+  });
+
+  const drafts = targets.map((target) => {
+    const generatedMatch = generated.find((item) => item.company.toLowerCase() === target.company.toLowerCase());
+    const fallback = accountDraft(founder, target.company, target.contact?.address);
+    return {
+      id: newId("draft"),
+      missionId: mission.id,
+      targetId: target.id,
+      channel: target.contact?.email ? "Email" : target.contact?.phone ? "Call" : "Email",
+      subject: trimSubject(generatedMatch?.subject || fallback.subject),
+      body: trimDraft(generatedMatch?.body || fallback.body, founder.stage === "Idea" ? 55 : founder.stage === "Beta" ? 80 : 120),
+      status: "draft",
+      createdAt: now(),
+      updatedAt: now()
+    } satisfies Draft;
+  });
+  return { targets, drafts };
+}
+
 async function callNebius(
   founder: FounderProfile,
   sources: SourceEvidence[],
-  scoutBriefs: BandScoutBrief[]
+  scoutBriefs: BandScoutBrief[],
+  accounts: AccountProspect[] = []
 ): Promise<GeneratedPayload> {
   if (!client) return fallbackGeneration(founder, sources);
 
@@ -87,7 +135,7 @@ async function callNebius(
       {
         role: "system",
         content:
-          "Return strict JSON only. Create concise, source-grounded founder outreach targets. Do not invent people, companies, private emails, or private LinkedIn access. Every target must copy one or more exact source URLs supplied by the user."
+          "Return strict JSON only. Create concise, source-grounded founder outreach targets. Do not invent people, companies, private emails, or private LinkedIn access. Every target must copy one or more exact source URLs supplied by the user. If accounts are supplied, write one draft for each supplied company only: preserve the exact company name, do not omit accounts, and do not invent a contact person."
       },
       {
         role: "user",
@@ -102,6 +150,13 @@ async function callNebius(
             agent: brief.agent,
             lane: brief.lane,
             recommendation: brief.content
+          })),
+          accounts: accounts.map((account) => ({
+            company: account.company,
+            role: account.role,
+            score: account.score,
+            publicContact: account.contact,
+            sourceUrls: account.evidence.map((evidence) => evidence.url)
           })),
           requiredShape: {
             targets: [
@@ -153,6 +208,26 @@ function fallbackGeneration(founder: FounderProfile, sources: SourceEvidence[]):
     } satisfies GeneratedTarget;
   });
   return { targets };
+}
+
+function accountDraft(founder: FounderProfile, company: string, address?: string) {
+  const location = address ? ` in ${address}` : "";
+  if (founder.stage === "Idea") {
+    return {
+      subject: `Quick question for ${company}`,
+      body: `I am researching ${founder.description} for ${founder.audience}. ${company}${location} looked close to the problem. Could I ask two short questions this week?`
+    };
+  }
+  if (founder.stage === "Beta") {
+    return {
+      subject: `Early access for ${company}`,
+      body: `I am testing ${founder.startup} for ${founder.audience}. ${company}${location} looks like a relevant early team. Would you try it and give blunt feedback?`
+    };
+  }
+  return {
+    subject: `Quick idea for ${company}`,
+    body: `I built ${founder.startup} for ${founder.audience}. I found ${company}${location} through a public listing and thought the workflow may be relevant. Open to a short conversation?`
+  };
 }
 
 function stageCopyFor(stage: FounderProfile["stage"]) {
