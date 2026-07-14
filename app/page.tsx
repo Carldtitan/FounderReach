@@ -21,7 +21,6 @@ import {
   ShieldCheck,
   Sparkles,
   Target as TargetIcon,
-  UserCheck,
   X
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -109,6 +108,7 @@ export default function FounderReach() {
   const events = Array.isArray(bundle?.events) ? bundle.events : [];
   const approvedDrafts = drafts.filter((draft) => draft.status === "approved");
   const pendingDrafts = drafts.filter((draft) => draft.status === "draft" || draft.status === "edited");
+  const contactableTargets = targets.filter((target) => Boolean(target.contact?.email || target.contact?.phone || target.contact?.contactUrl || target.contact?.website)).length;
   const selectedDraft = drafts.find((draft) => draft.id === selectedDraftId) ?? null;
   const selectedTarget = selectedDraft ? targets.find((target) => target.id === selectedDraft.targetId) ?? null : null;
   const currentStepIndex = bundle ? runSteps.indexOf(bundle.mission.currentStep as StepName) : -1;
@@ -386,9 +386,9 @@ export default function FounderReach() {
               </div>
             </div>
             <Metric icon={TargetIcon} label="Targets" value={targets.length} />
+            <Metric icon={Phone} label="Contact routes" value={contactableTargets} />
             <Metric icon={FileText} label="Drafts" value={drafts.length} />
             <Metric icon={ShieldCheck} label="Approved" value={approvedDrafts.length} />
-            <Metric icon={UserCheck} label="Pending" value={pendingDrafts.length} />
             <RunTimeline
               status={bundle.mission.status}
               currentStepIndex={currentStepIndex}
