@@ -8,10 +8,14 @@ import {
   Clock3,
   ExternalLink,
   FileText,
+  Globe2,
   History,
   Home,
   Loader2,
+  LogOut,
+  Mail,
   MessageSquare,
+  Phone,
   Play,
   Search,
   ShieldCheck,
@@ -20,7 +24,7 @@ import {
   UserCheck,
   X
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   ApprovalMode,
   Draft,
@@ -34,6 +38,7 @@ import type {
 } from "@/lib/types";
 
 type Tab = "home" | "targets" | "drafts" | "approvals" | "history";
+type SessionUser = { id: string; email?: string | null; name?: string | null };
 
 const stages: Stage[] = ["Idea", "Beta", "First customers", "Growth"];
 const goals: Goal[] = ["Interviews", "Beta users", "Customers", "Partners", "Investors"];
@@ -63,6 +68,8 @@ function cx(...classes: Array<string | false | undefined>) {
 }
 
 export default function FounderReach() {
+  const [session, setSession] = useState<"loading" | "anonymous" | "ready">("loading");
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [mode, setMode] = useState<"start" | "onboarding" | "app">("start");
   const [step, setStep] = useState(0);
   const [tab, setTab] = useState<Tab>("home");
@@ -82,6 +89,20 @@ export default function FounderReach() {
     tone: "Founder-led" as Tone,
     approvalMode: "Ask first" as ApprovalMode
   });
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((response) => response.json())
+      .then((body) => {
+        if (body?.user?.id) {
+          setUser(body.user as SessionUser);
+          setSession("ready");
+        } else {
+          setSession("anonymous");
+        }
+      })
+      .catch(() => setSession("anonymous"));
+  }, []);
 
   const targets = bundle?.targets ?? [];
   const drafts = bundle?.drafts ?? [];
@@ -199,6 +220,26 @@ export default function FounderReach() {
     }));
   }
 
+  async function signOut() {
+    await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => null);
+    setUser(null);
+    setBundle(null);
+    setMode("start");
+    setSession("anonymous");
+  }
+
+  if (session === "loading") {
+    return (
+      <main className="auth-screen">
+        <span className="brand-mark"><Sparkles size={18} /></span>
+      </main>
+    );
+  }
+
+  if (session === "anonymous") {
+    return <AuthGate onSignedIn={(nextUser) => { setUser(nextUser); setSession("ready"); }} />;
+  }
+
   if (mode === "start") {
     return (
       <main className="start-screen">
@@ -301,6 +342,10 @@ export default function FounderReach() {
             <button className="secondary-button" onClick={() => window.open("https://app.band.ai/dashboard", "_blank", "noopener,noreferrer")}>
               <MessageSquare size={17} />
               BAND
+            </button>
+            <span className="account-label" title={user?.email || "Signed in"}>{user?.email || user?.name || "Account"}</span>
+            <button className="icon-button" onClick={signOut} title="Sign out" aria-label="Sign out">
+              <LogOut size={17} />
             </button>
           </div>
         </header>
@@ -481,6 +526,74 @@ export default function FounderReach() {
   }
 }
 
+function AuthGate({ onSignedIn }: { onSignedIn: (user: SessionUser) => void }) {
+  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function submit() {
+    if (!email || password.length < 8 || busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(mode === "sign-in" ? "/api/auth/sign-in" : "/api/auth/sign-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Authentication failed");
+      if (body.requireEmailVerification) {
+        setMessage("Check your email, then sign in.");
+        setMode("sign-in");
+        return;
+      }
+      const session = await fetch("/api/auth/me").then((result) => result.json());
+      if (!session?.user?.id) {
+        setMessage("Account created. Sign in to continue.");
+        setMode("sign-in");
+        return;
+      }
+      onSignedIn(session.user as SessionUser);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Authentication failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="auth-screen">
+      <section className="auth-card">
+        <div className="brand-row">
+          <span className="brand-mark"><Sparkles size={18} /></span>
+          <span>FounderReach</span>
+        </div>
+        <div className="auth-heading">
+          <p className="eyebrow">{mode === "sign-in" ? "Welcome back" : "Create account"}</p>
+          <h1>{mode === "sign-in" ? "Sign in" : "Get started"}</h1>
+        </div>
+        <div className="auth-fields">
+          {mode === "sign-up" && <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name" autoComplete="name" />}
+          <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" autoComplete="email" inputMode="email" />
+          <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" autoComplete={mode === "sign-in" ? "current-password" : "new-password"} type="password" />
+        </div>
+        {message && <p className="auth-message">{message}</p>}
+        <button className="primary-button full" disabled={busy || !email || password.length < 8} onClick={submit}>
+          {busy ? <Loader2 className="spin" size={17} /> : null}
+          {mode === "sign-in" ? "Sign in" : "Create account"}
+        </button>
+        <button className="auth-switch" onClick={() => { setMode(mode === "sign-in" ? "sign-up" : "sign-in"); setMessage(""); }}>
+          {mode === "sign-in" ? "Create account" : "Sign in"}
+        </button>
+      </section>
+    </main>
+  );
+}
+
 function ChipGrid<T extends string>({ options, value, onPick }: { options: T[]; value: T; onPick: (value: T) => void }) {
   return (
     <div className="option-grid">
@@ -605,6 +718,7 @@ function TargetCard({
           </a>
         ))}
       </div>
+      <ContactActions target={target} draft={draft} />
       <div className="card-actions">
         <button
           className="secondary-button"
@@ -685,6 +799,8 @@ function DraftDrawer({
           ))}
         </div>
 
+        <ContactActions target={target} draft={draft} />
+
         <div className="drawer-actions">
           {editing ? (
             <button className="secondary-button" disabled={busy === `edit-${draft.id}`} onClick={onSave}>
@@ -703,6 +819,37 @@ function DraftDrawer({
           </button>
         </div>
       </aside>
+    </div>
+  );
+}
+
+function ContactActions({ target, draft }: { target: Target; draft?: Draft }) {
+  const contact = target.contact;
+  if (!contact?.phone && !contact?.email && !contact?.contactUrl && !contact?.website) return null;
+  const emailHref = contact.email && draft
+    ? `mailto:${contact.email}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`
+    : undefined;
+  const webHref = contact.contactUrl || contact.website;
+  return (
+    <div className="contact-row" aria-label="Public contact routes">
+      {contact.phone && (
+        <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} title={`Call ${contact.phone}`}>
+          <Phone size={14} />
+          Call
+        </a>
+      )}
+      {emailHref && (
+        <a href={emailHref} title={`Open email to ${contact.email}`}>
+          <Mail size={14} />
+          Email
+        </a>
+      )}
+      {webHref && (
+        <a href={webHref} target="_blank" rel="noreferrer" title="Open public contact page">
+          <Globe2 size={14} />
+          Site
+        </a>
+      )}
     </div>
   );
 }
