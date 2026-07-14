@@ -92,6 +92,24 @@ export async function mirrorDelete(table: string, column: string, value: string)
   }
 }
 
+export async function sendInsForgeEmail(input: {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
+  replyTo?: string;
+}) {
+  const client = await getClient();
+  if (!client?.emails?.send) return { sent: false, error: "InsForge email service is unavailable." };
+  try {
+    const result = await client.emails.send(input);
+    if (result.error) throw result.error;
+    return { sent: true, id: result.data?.id as string | undefined, skipped: result.data?.skipped as string[] | undefined };
+  } catch (error) {
+    return { sent: false, error: describeError(error, "InsForge email send failed") };
+  }
+}
+
 function describeError(error: unknown, fallback: string) {
   if (error instanceof Error) return error.message;
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {

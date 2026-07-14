@@ -17,7 +17,10 @@ import {
   MessageSquare,
   Phone,
   Play,
+  Radar,
+  RefreshCw,
   Search,
+  Send,
   ShieldCheck,
   Sparkles,
   Target as TargetIcon,
@@ -26,6 +29,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type {
   ApprovalMode,
+  AutopilotSnapshot,
   Draft,
   Goal,
   Market,
@@ -36,8 +40,21 @@ import type {
   Tone
 } from "@/lib/types";
 
-type Tab = "home" | "targets" | "drafts" | "approvals" | "history";
+type Tab = "home" | "targets" | "drafts" | "approvals" | "autopilot" | "history";
 type SessionUser = { id: string; email?: string | null; name?: string | null };
+type AutopilotFormState = {
+  name: string;
+  schedule: string;
+  minReviews: number;
+  requireEmail: boolean;
+  excludeDomains: string;
+  leadTarget: number;
+  dailySendCap: number;
+  autoSend: boolean;
+  autoReply: boolean;
+  senderName: string;
+  replyTo: string;
+};
 
 const stages: Stage[] = ["Idea", "Beta", "First customers", "Growth"];
 const goals: Goal[] = ["Interviews", "Beta users", "Customers", "Partners", "Investors"];
@@ -59,6 +76,7 @@ const navItems = [
   { id: "targets" as Tab, label: "Targets", icon: TargetIcon },
   { id: "drafts" as Tab, label: "Drafts", icon: FileText },
   { id: "approvals" as Tab, label: "Approvals", icon: ShieldCheck },
+  { id: "autopilot" as Tab, label: "Autopilot", icon: Radar },
   { id: "history" as Tab, label: "History", icon: History }
 ];
 
@@ -73,6 +91,20 @@ export default function FounderReach() {
   const [step, setStep] = useState(0);
   const [tab, setTab] = useState<Tab>("home");
   const [bundle, setBundle] = useState<MissionBundle | null>(null);
+  const [autopilot, setAutopilot] = useState<AutopilotSnapshot | null>(null);
+  const [autopilotForm, setAutopilotForm] = useState<AutopilotFormState>({
+    name: "",
+    schedule: "0 14 * * 1-5",
+    minReviews: 5,
+    requireEmail: true,
+    excludeDomains: "",
+    leadTarget: 60,
+    dailySendCap: 20,
+    autoSend: false,
+    autoReply: false,
+    senderName: "",
+    replyTo: ""
+  });
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [draftEdits, setDraftEdits] = useState<Record<string, { subject: string; body: string }>>({});
@@ -102,6 +134,37 @@ export default function FounderReach() {
       })
       .catch(() => setSession("anonymous"));
   }, []);
+
+  useEffect(() => {
+    if (!bundle?.mission.id) {
+      setAutopilot(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/missions/${bundle.mission.id}/autopilot`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((snapshot: AutopilotSnapshot | null) => {
+        if (cancelled || !snapshot) return;
+        setAutopilot(snapshot);
+        if (snapshot.autopilot) {
+          setAutopilotForm({
+            name: snapshot.autopilot.name,
+            schedule: snapshot.autopilot.schedule,
+            minReviews: snapshot.autopilot.filters.minReviews,
+            requireEmail: snapshot.autopilot.filters.requireEmail,
+            excludeDomains: snapshot.autopilot.filters.excludeDomains.join(", "),
+            leadTarget: snapshot.autopilot.leadTarget || 60,
+            dailySendCap: snapshot.autopilot.dailySendCap,
+            autoSend: snapshot.autopilot.autoSend,
+            autoReply: snapshot.autopilot.autoReply === true,
+            senderName: snapshot.autopilot.senderName || "",
+            replyTo: snapshot.autopilot.replyTo || ""
+          });
+        }
+      })
+      .catch(() => null);
+    return () => { cancelled = true; };
+  }, [bundle?.mission.id]);
 
   const targets = bundle?.targets ?? [];
   const drafts = bundle?.drafts ?? [];
@@ -224,8 +287,33 @@ export default function FounderReach() {
     await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => null);
     setUser(null);
     setBundle(null);
+    setAutopilot(null);
     setMode("start");
     setSession("anonymous");
+  }
+
+  async function saveAutopilot(action?: "pause" | "resume" | "run") {
+    if (!bundle || busy) return;
+    setBusy("autopilot");
+    setError(null);
+    try {
+      const exists = Boolean(autopilot?.autopilot);
+      const response = await fetch(`/api/missions/${bundle.mission.id}/autopilot`, {
+        method: action || exists ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action ? { action } : {
+          ...autopilotForm,
+          excludeDomains: autopilotForm.excludeDomains.split(",").map((item) => item.trim()).filter(Boolean)
+        })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Autopilot update failed");
+      setAutopilot(body as AutopilotSnapshot);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Autopilot update failed");
+    } finally {
+      setBusy(null);
+    }
   }
 
   if (session === "loading") {
@@ -447,6 +535,18 @@ export default function FounderReach() {
           </section>
         )}
 
+        {tab === "autopilot" && (
+          <AutopilotPanel
+            snapshot={autopilot}
+            form={autopilotForm}
+            busy={busy === "autopilot"}
+            onChange={(update) => setAutopilotForm((current) => ({ ...current, ...update }))}
+            onSave={() => saveAutopilot()}
+            onRun={() => saveAutopilot("run")}
+            onToggle={() => saveAutopilot(autopilot?.autopilot?.active ? "pause" : "resume")}
+          />
+        )}
+
         {tab === "history" && (
           <section className="history-card">
             <AgentEvents events={events.slice().reverse()} full />
@@ -604,6 +704,202 @@ function ChipGrid<T extends string>({ options, value, onPick }: { options: T[]; 
         </button>
       ))}
     </div>
+  );
+}
+
+function AutopilotPanel({
+  snapshot,
+  form,
+  busy,
+  onChange,
+  onSave,
+  onRun,
+  onToggle
+}: {
+  snapshot: AutopilotSnapshot | null;
+  form: AutopilotFormState;
+  busy: boolean;
+  onChange: (update: Partial<AutopilotFormState>) => void;
+  onSave: () => void;
+  onRun: () => void;
+  onToggle: () => void;
+}) {
+  const automation = snapshot?.autopilot || null;
+  const leads = snapshot?.leads || [];
+  const queue = snapshot?.queue || [];
+  const runs = snapshot?.runs || [];
+  const conversations = snapshot?.conversations || [];
+  const messages = snapshot?.messages || [];
+  const ready = queue.filter((item) => item.state === "ready").length;
+  const sent = queue.filter((item) => item.state === "sent").length;
+
+  return (
+    <section className="autopilot-page">
+      <div className="autopilot-heading">
+        <div>
+          <p className="eyebrow">Nimble Jobs</p>
+          <h2>SDR Autopilot</h2>
+        </div>
+        {automation && <span className={cx("status-pill", automation.active ? "complete" : "error")}>{automation.active ? "Active" : "Paused"}</span>}
+      </div>
+
+      <div className="autopilot-grid">
+        <section className="automation-card controls-card">
+          <div className="section-head">
+            <h2>{automation ? automation.name : "Lead watch"}</h2>
+            <Radar size={18} />
+          </div>
+          <div className="automation-fields">
+            <label>
+              <span>Name</span>
+              <input value={form.name} onChange={(event) => onChange({ name: event.target.value })} placeholder="Founder lead watch" />
+            </label>
+            <label>
+              <span>Cron</span>
+              <input value={form.schedule} onChange={(event) => onChange({ schedule: event.target.value })} placeholder="0 14 * * 1-5" />
+            </label>
+            <label>
+              <span>Min reviews</span>
+              <input type="number" min="0" max="10000" value={form.minReviews} onChange={(event) => onChange({ minReviews: Number(event.target.value) })} />
+            </label>
+            <label>
+              <span>Daily cap</span>
+              <input type="number" min="1" max="50" value={form.dailySendCap} onChange={(event) => onChange({ dailySendCap: Number(event.target.value) })} />
+            </label>
+            <label>
+              <span>Lead target</span>
+              <input type="number" min="10" max="500" value={form.leadTarget} onChange={(event) => onChange({ leadTarget: Number(event.target.value) })} />
+            </label>
+            <label className="wide">
+              <span>Exclude domains</span>
+              <input value={form.excludeDomains} onChange={(event) => onChange({ excludeDomains: event.target.value })} placeholder="competitor.com, directory.com" />
+            </label>
+            <label className="wide">
+              <span>Sender name</span>
+              <input value={form.senderName} onChange={(event) => onChange({ senderName: event.target.value })} placeholder="Your startup" />
+            </label>
+            <label className={cx("wide", !form.autoSend && "dimmed")}>
+              <span>Reply-to</span>
+              <input value={form.replyTo} onChange={(event) => onChange({ replyTo: event.target.value })} placeholder="founder@startup.com" inputMode="email" />
+            </label>
+          </div>
+          <div className="toggle-row">
+            <label className="toggle-control">
+              <input type="checkbox" checked={form.requireEmail} onChange={(event) => onChange({ requireEmail: event.target.checked })} />
+              <span aria-hidden="true" />
+              Public email only
+            </label>
+            <label className="toggle-control">
+              <input type="checkbox" checked={form.autoSend} onChange={(event) => onChange({ autoSend: event.target.checked })} />
+              <span aria-hidden="true" />
+              Auto-send
+            </label>
+            <label className={cx("toggle-control", !form.autoSend && "dimmed")}>
+              <input type="checkbox" checked={form.autoReply} onChange={(event) => onChange({ autoReply: event.target.checked })} />
+              <span aria-hidden="true" />
+              Auto-reply
+            </label>
+          </div>
+          <div className="automation-actions">
+            <button className="primary-button" disabled={busy} onClick={onSave}>
+              {busy ? <Loader2 className="spin" size={17} /> : <Check size={17} />}
+              {automation ? "Save" : "Create watch"}
+            </button>
+            {automation && (
+              <>
+                <button className="secondary-button" disabled={busy} onClick={onRun}>
+                  <RefreshCw size={17} />
+                  Run now
+                </button>
+                <button className="secondary-button" disabled={busy} onClick={onToggle}>
+                  {automation.active ? <Clock3 size={17} /> : <Play size={17} />}
+                  {automation.active ? "Pause" : "Resume"}
+                </button>
+              </>
+            )}
+          </div>
+        </section>
+
+        <section className="automation-card metrics-card">
+          <div className="section-head">
+            <h2>Pipeline</h2>
+            <Send size={18} />
+          </div>
+          <div className="autopilot-metrics">
+            <div><strong>{leads.length}</strong><span>Leads</span></div>
+            <div><strong>{ready}</strong><span>Ready</span></div>
+            <div><strong>{sent}</strong><span>Sent</span></div>
+            <div><strong>{conversations.length}</strong><span>Replies</span></div>
+          </div>
+          <div className="job-status multi">
+            <span>Nimble Jobs</span>
+            <strong>{automation?.nimbleJobs?.length || (automation ? 1 : 0)} lanes</strong>
+            <small>{automation?.nimbleJobs?.map((job) => job.lane.replace(" signals", "")).join(" · ") || "Not created"}</small>
+          </div>
+          <div className="run-list">
+            {runs.slice(0, 5).map((run) => (
+              <div key={run.id} className="run-row">
+                <span className={cx("status-dot", run.status === "processed" && "approved", run.status === "failed" && "rejected")} />
+                <small>{run.lane?.replace(" signals", "") || "Discovery"}</small>
+                <strong>{run.discoveredCount} new</strong>
+                <small>{run.queuedCount} queued</small>
+                <small>{run.sentCount} sent</small>
+              </div>
+            ))}
+            {!runs.length && <p className="quiet">Waiting for first run</p>}
+          </div>
+        </section>
+      </div>
+
+      <section className="automation-card lead-table-card">
+        <div className="section-head">
+          <h2>Persistent leads</h2>
+          <span className="table-count">{leads.length}</span>
+        </div>
+        <div className="lead-table">
+          {leads.slice(0, 16).map((lead) => {
+            const item = queue.find((entry) => entry.leadId === lead.id);
+            return (
+              <a className="persistent-lead-row" href={lead.url} key={lead.id} target="_blank" rel="noreferrer">
+                <span>
+                  <strong>{lead.company}</strong>
+                  <small>{lead.role}</small>
+                </span>
+                <small>{lead.contact.email || lead.sourceDomain}</small>
+                <span className={cx("queue-state", item?.state || lead.status)}>{item?.state || lead.status}</span>
+                <ExternalLink size={16} />
+              </a>
+            );
+          })}
+          {!leads.length && <p className="quiet">New qualified leads appear here.</p>}
+        </div>
+      </section>
+
+      <section className="automation-card conversation-list-card">
+        <div className="section-head">
+          <h2>Conversations</h2>
+          <span className="table-count">{conversations.length}</span>
+        </div>
+        <div className="lead-table">
+          {conversations.slice(0, 8).map((conversation) => {
+            const lead = leads.find((item) => item.id === conversation.leadId);
+            const latest = messages.filter((message) => message.conversationId === conversation.id).slice(-1)[0];
+            return (
+              <div className="persistent-lead-row" key={conversation.id}>
+                <span>
+                  <strong>{lead?.company || conversation.participantEmail}</strong>
+                  <small>{latest?.body || conversation.subject}</small>
+                </span>
+                <small>{conversation.participantEmail}</small>
+                <span className={cx("queue-state", conversation.state)}>{conversation.state.replace("_", " ")}</span>
+                <MessageSquare size={16} />
+              </div>
+            );
+          })}
+          {!conversations.length && <p className="quiet">Replies appear here.</p>}
+        </div>
+      </section>
+    </section>
   );
 }
 

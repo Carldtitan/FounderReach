@@ -156,6 +156,48 @@ export async function delegateEvidenceToScouts(
   };
 }
 
+export async function dispatchAutopilotBatch(roomId: string | undefined, sources: SourceEvidence[]) {
+  const scouts = await getBandScouts();
+  if (!roomId || !scouts.length || !sources.length) return { delegated: 0, scouts: [] as string[] };
+  await addBandScouts(roomId, scouts);
+  const packet = compactPacket(sources);
+  const purpose: Record<ResearchLane, string> = {
+    "Pain signals": "Find one concrete workflow pain suggested by the public evidence. Flag weak evidence.",
+    "Buyer signals": "Choose the strongest buying signal and decide whether this account deserves outreach.",
+    "Channel targets": "Identify the best public contact path or partner angle. Do not invent a person or email."
+  };
+  const settled = await Promise.allSettled(scouts.map(async (scout) => {
+    const sent = await sendBandMessage(roomId, [
+      `@${scout.handle} Review this newly discovered FounderReach batch.`,
+      purpose[scout.lane],
+      "Reply with one concise bullet using only the packet. Do not make promises or invent facts.",
+      "Evidence packet:",
+      JSON.stringify(packet)
+    ].join("\n"), scout);
+    return sent ? scout : null;
+  }));
+  const delegated = settled.flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []);
+  return { delegated: delegated.length, scouts: delegated.map((scout) => scout.name) };
+}
+
+export async function dispatchInboundReply(roomId: string | undefined, input: { company: string; subject: string; body: string }) {
+  const scouts = (await getBandScouts()).filter((scout) => scout.lane === "Buyer signals" || scout.lane === "Pain signals");
+  if (!roomId || !scouts.length) return { delegated: 0 };
+  await addBandScouts(roomId, scouts);
+  const settled = await Promise.allSettled(scouts.map((scout) => sendBandMessage(
+    roomId,
+    [
+      `@${scout.handle} An outreach recipient from ${input.company} replied.`,
+      scout.lane === "Buyer signals" ? "Classify intent and the clearest next step." : "Identify the exact concern or pain in the reply.",
+      "Reply with one short bullet. Do not invent facts or commit the founder to pricing, contracts, compliance, or deadlines.",
+      `Subject: ${input.subject.slice(0, 180)}`,
+      `Reply: ${input.body.slice(0, 1400)}`
+    ].join("\n"),
+    scout
+  )));
+  return { delegated: settled.filter((item) => item.status === "fulfilled" && item.value).length };
+}
+
 function messagesFromContext(value: unknown) {
   const found: Array<{ id?: string; content: string; senderId: string; senderName: string }> = [];
   const visited = new Set<object>();

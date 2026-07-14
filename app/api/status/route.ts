@@ -7,13 +7,16 @@ export async function GET() {
     insforge: await insforgeReady(),
     auth,
     nimble: Boolean(process.env.NIMBLE_API_KEY),
+    automationCron: Boolean(process.env.AUTOMATION_CRON_SECRET),
+    inboundEmail: Boolean(process.env.INBOUND_EMAIL_SECRET),
     nebius: Boolean(process.env.NEBIUS_API_KEY),
     band: Boolean(process.env.BAND_API_KEY),
     bandRoom: Boolean(process.env.BAND_API_KEY),
     capabilities: {
-      nimble: ["Google Maps agent batches", "site map", "public contact extraction"],
-      band: ["three parallel scouts", "task board", "evidence handoffs"],
-      nebius: ["source-grounded ranking", "short outreach drafts"]
+      nimble: ["Google Maps agent batches", "site map", "public contact extraction", "scheduled Jobs"],
+      insforge: ["auth", "Postgres", "email outbox", "cron ingestion", "conversation records"],
+      band: ["three parallel scouts", "task board", "evidence handoffs", "reply triage"],
+      nebius: ["source-grounded ranking", "short outreach drafts", "guarded reply drafts"]
     }
   });
 }

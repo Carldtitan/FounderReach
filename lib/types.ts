@@ -111,3 +111,127 @@ export interface MissionBundle {
   approvals: Approval[];
   events: AgentEvent[];
 }
+
+export interface AutopilotFilters {
+  minReviews: number;
+  requireEmail: boolean;
+  excludeDomains: string[];
+}
+
+export interface NimbleJobBinding {
+  id: string;
+  lane: ResearchLane;
+  queryCount: number;
+}
+
+export interface Autopilot {
+  id: string;
+  missionId: string;
+  founderId: string;
+  ownerId: string;
+  nimbleJobId: string;
+  nimbleJobs?: NimbleJobBinding[];
+  name: string;
+  schedule: string;
+  queryInputs: Array<{ query: string; tag?: string }>;
+  filters: AutopilotFilters;
+  leadTarget: number;
+  dailySendCap: number;
+  autoSend: boolean;
+  autoReply?: boolean;
+  senderName?: string;
+  replyTo?: string;
+  active: boolean;
+  lastProcessedRunId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type LeadStatus = "new" | "qualified" | "queued" | "sent" | "replied" | "needs_review" | "skipped" | "rejected";
+
+export interface PersistentLead {
+  id: string;
+  automationId: string;
+  externalKey: string;
+  name: string;
+  company: string;
+  role: string;
+  score: Score;
+  rationale: string;
+  url: string;
+  sourceDomain: string;
+  contact: ContactRoute;
+  evidence: SourceEvidence[];
+  status: LeadStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OutreachState = "ready" | "sent" | "skipped" | "failed" | "waiting";
+
+export interface OutreachQueueItem {
+  id: string;
+  automationId: string;
+  leadId: string;
+  recipient: string;
+  subject: string;
+  body: string;
+  state: OutreachState;
+  providerId?: string;
+  sentAt?: string;
+  touchCount?: number;
+  nextActionAt?: string;
+  lastAttemptAt?: string;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutomationRun {
+  id: string;
+  automationId: string;
+  nimbleRunId: string;
+  lane?: ResearchLane;
+  status: string;
+  discoveredCount: number;
+  qualifiedCount: number;
+  queuedCount: number;
+  sentCount: number;
+  error?: string;
+  processedAt?: string;
+  createdAt: string;
+}
+
+export type ConversationState = "open" | "needs_review" | "closed";
+
+export interface OutreachConversation {
+  id: string;
+  automationId: string;
+  leadId: string;
+  participantEmail: string;
+  subject: string;
+  state: ConversationState;
+  lastMessageAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationMessage {
+  id: string;
+  conversationId: string;
+  direction: "inbound" | "outbound";
+  sender: string;
+  subject?: string;
+  body: string;
+  providerMessageId?: string;
+  createdAt: string;
+}
+
+export interface AutopilotSnapshot {
+  autopilot: Autopilot | null;
+  leads: PersistentLead[];
+  queue: OutreachQueueItem[];
+  runs: AutomationRun[];
+  conversations: OutreachConversation[];
+  messages: ConversationMessage[];
+}

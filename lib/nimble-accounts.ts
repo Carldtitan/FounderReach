@@ -1,7 +1,7 @@
 import type { ContactRoute, FounderProfile, ResearchLane, SourceEvidence } from "./types";
 import type { NimbleResearchProgress } from "./nimble";
 
-interface MapsResult {
+export interface MapsResult {
   title?: string;
   place_id?: string;
   place_url?: string;
@@ -84,13 +84,16 @@ function businessTerm(profile: FounderProfile) {
   return trimmed || profile.audience || profile.startup;
 }
 
-function accountQueries(profile: FounderProfile): Array<{ lane: ResearchLane; query: string }> {
+export function accountQueries(profile: FounderProfile): Array<{ lane: ResearchLane; query: string }> {
   const term = businessTerm(profile);
   const location = locationFor(profile);
   return [
     { lane: "Buyer signals", query: `${term} in ${location}` },
+    { lane: "Buyer signals", query: `${term} services in ${location}` },
     { lane: "Pain signals", query: `independent ${term} in ${location}` },
-    { lane: "Channel targets", query: `${term} association in ${location}` }
+    { lane: "Pain signals", query: `${term} office in ${location}` },
+    { lane: "Channel targets", query: `${term} association in ${location}` },
+    { lane: "Channel targets", query: `${term} network in ${location}` }
   ];
 }
 
@@ -101,7 +104,7 @@ function scoreMapResult(item: MapsResult) {
   return "Low" as const;
 }
 
-function toProspect(item: MapsResult, lane: ResearchLane): AccountProspect | null {
+export function mapsResultToProspect(item: MapsResult, lane: ResearchLane): AccountProspect | null {
   const company = cleanText(item.title, 120);
   const placeUrl = cleanText(item.place_url, 900);
   if (!company || !placeUrl || item.business_status === "CLOSED_PERMANENTLY" || item.sponsored) return null;
@@ -157,7 +160,7 @@ function publicEmail(markdown: string, links: unknown) {
   return fromMailto || match || undefined;
 }
 
-async function enrichPublicContact(prospect: AccountProspect) {
+export async function enrichPublicContact(prospect: AccountProspect) {
   if (!prospect.contact.website) return prospect;
   try {
     const map = await nimble("map", { method: "POST", body: JSON.stringify({ url: prospect.contact.website }) });
@@ -182,7 +185,7 @@ async function enrichPublicContact(prospect: AccountProspect) {
       url: resolvedContact,
       domain: domainFromUrl(resolvedContact),
       snippet: email ? `Public email: ${email}` : "Public contact path verified by Nimble.",
-      lane: "Buyer signals",
+      lane: prospect.evidence[0]?.lane || "Buyer signals",
       method: "extract",
       verification: "verified"
     };
@@ -239,14 +242,14 @@ export async function runNimbleAccountDiscovery(
     const rows = result && result.status === "fulfilled" ? result.value : [];
     const lane = queries[index]?.lane || "Buyer signals";
     for (const row of rows) {
-      const prospect = toProspect(row, lane);
+      const prospect = mapsResultToProspect(row, lane);
       if (!prospect || seen.has(prospect.id)) continue;
       seen.add(prospect.id);
       prospects.push(prospect);
     }
   }
 
-  const selected = prospects.slice(0, 30);
+  const selected = prospects.slice(0, 60);
   await report(progress, {
     lane: "Buyer signals",
     phase: "search-complete",
@@ -255,11 +258,11 @@ export async function runNimbleAccountDiscovery(
   });
   await report(progress, {
     phase: "extract-start",
-    message: `Nimble contact enrichment: mapping and extracting public contact paths for ${Math.min(selected.length, 12)} accounts`,
-    count: Math.min(selected.length, 12)
+    message: `Nimble contact enrichment: mapping and extracting public contact paths for ${Math.min(selected.length, 30)} accounts`,
+    count: Math.min(selected.length, 30)
   });
-  const enriched = await Promise.allSettled(selected.slice(0, 12).map(enrichPublicContact));
-  const resolved = selected.map((prospect, index) => (index < 12 && enriched[index]?.status === "fulfilled" ? enriched[index].value : prospect));
+  const enriched = await Promise.allSettled(selected.slice(0, 30).map(enrichPublicContact));
+  const resolved = selected.map((prospect, index) => (index < 30 && enriched[index]?.status === "fulfilled" ? enriched[index].value : prospect));
   const publicEmails = resolved.filter((prospect) => prospect.contact.email).length;
   await report(progress, {
     phase: "extract-complete",
@@ -270,6 +273,6 @@ export async function runNimbleAccountDiscovery(
   return {
     prospects: resolved,
     sources: resolved.flatMap((prospect) => prospect.evidence),
-    stats: { mapsQueries: queries.length, discovered: prospects.length, enriched: Math.min(selected.length, 12), publicEmails }
+    stats: { mapsQueries: queries.length, discovered: prospects.length, enriched: Math.min(selected.length, 30), publicEmails }
   };
 }

@@ -20,6 +20,12 @@ interface GeneratedPayload {
   targets: GeneratedTarget[];
 }
 
+interface GeneratedReply {
+  body: string;
+  needsHuman: boolean;
+  reason: string;
+}
+
 const client = process.env.NEBIUS_API_KEY
   ? new OpenAI({
       apiKey: process.env.NEBIUS_API_KEY,
@@ -74,6 +80,54 @@ export async function generateTargetsAndDrafts(
   });
 
   return { targets, drafts };
+}
+
+export async function generateConversationReply(input: {
+  founder: FounderProfile;
+  company: string;
+  subject: string;
+  messages: Array<{ direction: "inbound" | "outbound"; body: string }>;
+}): Promise<GeneratedReply> {
+  const fallback: GeneratedReply = {
+    body: `Thanks for getting back to me. I appreciate the context. Would you be open to a short conversation so I can understand your workflow better?`,
+    needsHuman: false,
+    reason: "General reply"
+  };
+  if (!client) return fallback;
+  try {
+    const response = await client.chat.completions.create({
+      model: process.env.NEBIUS_MODEL || "deepseek-ai/DeepSeek-R1-0528",
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: "Return strict JSON only. Draft a concise founder reply under 90 words. Mark needsHuman true for pricing, contracts, legal, security, medical, financial, hiring, data access, a complaint, an opt-out, or any promise. Never invent product capabilities, deadlines, customers, or commitments."
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            startup: input.founder.startup,
+            description: input.founder.description,
+            audience: input.founder.audience,
+            company: input.company,
+            subject: input.subject,
+            history: input.messages.slice(-8).map((message) => ({ direction: message.direction, body: message.body.slice(0, 1200) })),
+            requiredShape: { body: "reply", needsHuman: false, reason: "short reason" }
+          })
+        }
+      ]
+    });
+    const parsed = JSON.parse(response.choices[0]?.message?.content || "{}") as Partial<GeneratedReply>;
+    if (!parsed.body || typeof parsed.needsHuman !== "boolean") return fallback;
+    return {
+      body: trimDraft(parsed.body, 90),
+      needsHuman: parsed.needsHuman,
+      reason: trimLine(parsed.reason || "Conversation reply")
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 function materializeAccountTargets(
