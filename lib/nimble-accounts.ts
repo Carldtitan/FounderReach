@@ -133,8 +133,7 @@ function toProspect(item: MapsResult, lane: ResearchLane): AccountProspect | nul
 }
 
 function contactPath(links: unknown) {
-  if (!Array.isArray(links)) return undefined;
-  const urls = links.filter((value): value is string => typeof value === "string" && /^https?:\/\//.test(value));
+  const urls = linkUrls(links);
   return urls.find((url) => {
     try {
       return /\/(contact|contact-us|get-started|book|appointment|schedule)(\/|$|\?)/i.test(new URL(url).pathname);
@@ -144,10 +143,15 @@ function contactPath(links: unknown) {
   });
 }
 
+function linkUrls(links: unknown) {
+  if (!Array.isArray(links)) return [] as string[];
+  return links
+    .map((value) => (typeof value === "string" ? value : typeof value === "object" && value ? (value as { url?: unknown; href?: unknown }).url || (value as { href?: unknown }).href : ""))
+    .filter((value): value is string => typeof value === "string");
+}
+
 function publicEmail(markdown: string, links: unknown) {
-  const mailto = Array.isArray(links)
-    ? links.find((value): value is string => typeof value === "string" && /^mailto:/i.test(value))
-    : undefined;
+  const mailto = linkUrls(links).find((value) => /^mailto:/i.test(value));
   const fromMailto = typeof mailto === "string" ? mailto.replace(/^mailto:/i, "").split("?")[0] : "";
   const match = markdown.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
   return fromMailto || match || undefined;
