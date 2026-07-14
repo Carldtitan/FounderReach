@@ -167,27 +167,22 @@ async function enrichPublicContact(prospect: AccountProspect) {
     const markdown = cleanText(data.markdown, 4000);
     const email = publicEmail(markdown, data.links);
     const resolvedContact = contactPath(data.links) || contactUrl;
-    return {
-      ...prospect,
-      contact: {
-        ...prospect.contact,
-        email,
-        contactUrl: resolvedContact,
-        source: email ? "Nimble Extract" : "Public website"
-      },
-      evidence: [
-        ...prospect.evidence,
-        {
-          title: `${prospect.company} public contact path`,
-          url: resolvedContact,
-          domain: domainFromUrl(resolvedContact),
-          snippet: email ? `Public email: ${email}` : "Public contact path verified by Nimble.",
-          lane: "Buyer signals",
-          method: "extract",
-          verification: "verified"
-        }
-      ]
+    const contact: ContactRoute = {
+      ...prospect.contact,
+      email,
+      contactUrl: resolvedContact,
+      source: email ? "Nimble Extract" : "Public website"
     };
+    const evidence: SourceEvidence = {
+      title: `${prospect.company} public contact path`,
+      url: resolvedContact,
+      domain: domainFromUrl(resolvedContact),
+      snippet: email ? `Public email: ${email}` : "Public contact path verified by Nimble.",
+      lane: "Buyer signals",
+      method: "extract",
+      verification: "verified"
+    };
+    return { ...prospect, contact, evidence: [...prospect.evidence, evidence] };
   } catch {
     return prospect;
   }
@@ -236,7 +231,8 @@ export async function runNimbleAccountDiscovery(
   const prospects: AccountProspect[] = [];
   const seen = new Set<string>();
   for (let index = 0; index < completed.length; index += 1) {
-    const rows = completed[index].status === "fulfilled" ? completed[index].value : [];
+    const result = completed[index];
+    const rows = result && result.status === "fulfilled" ? result.value : [];
     const lane = queries[index]?.lane || "Buyer signals";
     for (const row of rows) {
       const prospect = toProspect(row, lane);
