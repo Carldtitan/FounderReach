@@ -33,6 +33,17 @@ async function assertNoHorizontalOverflow(page, label) {
 async function capture(page, name, width, height) {
   await page.setViewportSize({ width, height });
   await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(outDir, `${name}-auth.png`), fullPage: true });
+  await assertNoHorizontalOverflow(page, `${name} auth`);
+
+  const email = process.env.AUTH_TEST_EMAIL;
+  const password = process.env.AUTH_TEST_PASSWORD;
+  if (!email || !password) return;
+  await page.getByPlaceholder("Email").fill(email);
+  await page.getByPlaceholder("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Start" }).waitFor({ timeout: 30000 });
+
   await page.screenshot({ path: path.join(outDir, `${name}-start.png`), fullPage: true });
   await assertNoHorizontalOverflow(page, `${name} start`);
 
@@ -76,7 +87,7 @@ async function main() {
   await capture(page, "desktop", 1440, 960);
   await capture(page, "mobile", 390, 844);
   await browser.close();
-  console.log(`Screenshots saved to ${outDir}`);
+  console.log(process.env.AUTH_TEST_EMAIL ? `Screenshots saved to ${outDir}` : `Auth screenshots saved to ${outDir}. Set AUTH_TEST_EMAIL and AUTH_TEST_PASSWORD for the full campaign flow.`);
 }
 
 main().catch((error) => {
